@@ -1,0 +1,37 @@
+import numpy as np
+import torch
+
+class ConvLayer:
+    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1):
+        # weights and bias will go here
+        fan_in = in_channels * kernel_size * kernel_size
+        self.weights = np.random.randn(out_channels, in_channels, kernel_size, kernel_size) * np.sqrt(2/fan_in)
+        self.bias = np.zeros(out_channels)
+        self.out_channels = out_channels
+        
+    
+    def forward(self, x):
+        # convolution will go here
+        # step 1 output dimension
+        batch_size, in_channel, height, width = x.shape
+        out_width = width - self.kernel_size + 1 + (2*self.padding)
+        out_height = height - self.kernel_size + 1 + (2*self.padding)
+        
+        # step 2 applying padding
+        x_padded = np.pad(x, ((0,0), (0,0), (self.padding, self.padding), (self.padding, self.padding)))
+
+        # step 3 initialized output
+        output = np.zeros((batch_size, self.out_channels, out_height, out_width))
+
+        # step 4 patch extraction
+        for i in range(out_height):
+            for j in range(out_width):
+                patch = x_padded[:, :, i:i+self.kernel_size, j:j+self.kernel_size]
+                output[:, :, i, j] = np.tensordot(patch, self.weights, axes=((1, 2, 3), (1, 2, 3)))
+
+
+
+    
+    def backward(self, upstream_grad):
+        # backprop will go here
+        pass

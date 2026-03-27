@@ -8,6 +8,9 @@ class ConvLayer:
         self.weights = np.random.randn(out_channels, in_channels, kernel_size, kernel_size) * np.sqrt(2/fan_in)
         self.bias = np.zeros(out_channels)
         self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.padding = padding
+        
         
     
     def forward(self, x):
@@ -19,17 +22,21 @@ class ConvLayer:
         
         # step 2 applying padding
         x_padded = np.pad(x, ((0,0), (0,0), (self.padding, self.padding), (self.padding, self.padding)))
-
+        self.x_padded = x_padded
         # step 3 initialized output
         output = np.zeros((batch_size, self.out_channels, out_height, out_width))
+
+        
 
         # step 4 patch extraction
         for i in range(out_height):
             for j in range(out_width):
                 patch = x_padded[:, :, i:i+self.kernel_size, j:j+self.kernel_size]
                 output[:, :, i, j] = np.tensordot(patch, self.weights, axes=((1, 2, 3), (1, 2, 3)))
+                output[:, :, i, j] += self.bias
 
-
+                
+        return output
 
     
     def backward(self, upstream_grad):

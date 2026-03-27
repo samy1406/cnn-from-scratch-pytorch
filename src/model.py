@@ -42,3 +42,16 @@ class ConvLayer:
     def backward(self, upstream_grad):
         # backprop will go here
         pass
+
+
+class ReLU:
+    def forward(self, x):
+        # one line
+        self.x = x
+        output = np.maximum(x, 0) 
+        return output
+    
+    def backward(self, upstream_grad):
+        # one line
+        mask = (self.x > 0)
+        return mask * upstream_grad

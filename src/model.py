@@ -55,3 +55,27 @@ class ReLU:
         # one line
         mask = (self.x > 0)
         return mask * upstream_grad
+
+
+class MaxPool:
+    def __init__(self, pool_size=2):
+        self.pool_size = pool_size
+    
+    def forward(self, x):
+        batch_size, channels, height, width = x.shape
+        out_height = height // self.pool_size
+        out_width  = width  // self.pool_size
+        
+        output = np.zeros((batch_size, channels, out_height, out_width))
+        self.mask = np.zeros_like(x)  # saves where the max was
+        self.x = x
+        for i in range(out_height):
+            for j in range(out_width):
+                # extract 2x2 window
+                window = x[:, :, i*self.pool_size:(i+1)*self.pool_size, j*self.pool_size:(j+1)*self.pool_size]
+                # take max
+                output[:, :, i, j] = np.max(window, axis=(2, 3))
+                # save mask — we'll do this after forward works
+        
+
+        return output

@@ -61,6 +61,7 @@ Softmax + CrossEntropy Loss
 
 ## Results
 
+
 | Metric | Value |
 |--------|-------|
 | Dataset | CIFAR-10 (10 classes) |

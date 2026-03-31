@@ -15,7 +15,7 @@ class ConvLayer:
     
     def forward(self, x):
         # convolution will go here
-        # step 1 output dimension
+        # output dimension
         batch_size, in_channel, height, width = x.shape
         out_width = width - self.kernel_size + 1 + (2*self.padding)
         out_height = height - self.kernel_size + 1 + (2*self.padding)

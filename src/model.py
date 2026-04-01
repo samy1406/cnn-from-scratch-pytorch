@@ -99,3 +99,13 @@ class MaxPool:
         
         return grad_input
 
+class Flatten:
+    def forward(self, x):
+        # save shape for backward
+        self.input_shape = x.shape
+        batch_size, in_channel, height, width = x.shape
+        return x.reshape(batch_size, in_channel * height * width)# reshape x to 2D
+    
+    def backward(self, upstream_grad):
+        batch_size, in_channel, height, width = self.input_shape
+        return upstream_grad.reshape(batch_size, in_channel, height, width)  # reshape back to original shape

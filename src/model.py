@@ -76,6 +76,26 @@ class MaxPool:
                 # take max
                 output[:, :, i, j] = np.max(window, axis=(2, 3))
                 # save mask — we'll do this after forward works
-        
+                window_mask = np.max(window, axis=(2, 3), keepdims=True)
+                mask = (window == window_mask)
+                self.mask[:, :, i*self.pool_size:(i+1)*self.pool_size, j*self.pool_size:(j+1)*self.pool_size] = mask
 
         return output
+    
+    def backward(self, upstream_grad):
+        grad_input = np.zeros_like(self.x)
+        
+        out_height = self.x.shape[2] // self.pool_size
+        out_width  = self.x.shape[3] // self.pool_size
+        
+        for i in range(out_height):
+            for j in range(out_width):
+                # get the upstream gradient for this window — shape (batch, channels)
+                grad = upstream_grad[:, :, i, j]
+                # expand to window shape for broadcasting — shape (batch, channels, 1, 1)
+                grad_expanded = grad[:, :, np.newaxis, np.newaxis]
+                # place gradient only where mask is True
+                grad_input[:, :, i*self.pool_size:(i+1)*self.pool_size, j*self.pool_size:(j+1)*self.pool_size] = grad_expanded * self.mask[:, :, i*self.pool_size:(i+1)*self.pool_size, j*self.pool_size:(j+1)*self.pool_size]
+        
+        return grad_input
+

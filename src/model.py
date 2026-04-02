@@ -109,3 +109,24 @@ class Flatten:
     def backward(self, upstream_grad):
         batch_size, in_channel, height, width = self.input_shape
         return upstream_grad.reshape(batch_size, in_channel, height, width)  # reshape back to original shape
+    
+
+class FCLayer:
+    def __init__(self, in_features, out_features):
+        # initialize weights and bias
+        fan_in = in_features 
+        self.weights = np.random.randn(in_features, out_features) * np.sqrt(2/fan_in)
+        self.bias = np.zeros(out_features)
+
+        
+    
+    def forward(self, x):
+        # matrix multiply + bias
+        self.result = (x @ self.weights) + self.bias
+        self.input = x
+        return self.result
+        
+    
+    def backward(self, upstream_grad):
+        # backprop
+        pass

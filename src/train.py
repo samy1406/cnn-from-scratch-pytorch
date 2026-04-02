@@ -19,7 +19,7 @@ def train(epochs=10, lr=0.01, batch_size=64):
     
     for epoch in range(epochs):
         epoch_loss = 0
-        for images, labels in train_loader:
+        for batch_idx, (images, labels) in enumerate(train_loader):
             x = images.numpy()
             y = labels.numpy()
             
@@ -45,6 +45,8 @@ def train(epochs=10, lr=0.01, batch_size=64):
             grad = pool1.backward(grad)
             grad = relu1.backward(grad)
             conv1.backward(grad)
+            if batch_idx % 10 == 0:
+                print(f"Epoch {epoch+1} | Batch {batch_idx}/{len(train_loader)} | Loss: {loss:.4f}")
             
             # 6. SGD update
             # Update FC2

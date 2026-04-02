@@ -39,47 +39,47 @@ class ConvLayer:
         return output
 
     
-        def backward(self, upstream_grad):
-            print("upstream_grad type:", type(upstream_grad))
-            print("upstream_grad:", upstream_grad)
-            # 1. Dimensions
-            batch_size, out_channels, out_height, out_width = upstream_grad.shape
-            
-            # 2. Initialize Gradients
-            # grad_bias: sum over batch and spatial dimensions
-            self.grad_bias = np.sum(upstream_grad, axis=(0, 2, 3))
-            
-            # grad_weights: same shape as self.weights
-            self.grad_weights = np.zeros_like(self.weights)
-            
-            # grad_input: we start with the padded shape to match forward pass
-            grad_input_padded = np.zeros_like(self.x_padded)
+    def backward(self, upstream_grad):
+        print("upstream_grad type:", type(upstream_grad))
+        print("upstream_grad:", upstream_grad)
+        # 1. Dimensions
+        batch_size, out_channels, out_height, out_width = upstream_grad.shape
+        
+        # 2. Initialize Gradients
+        # grad_bias: sum over batch and spatial dimensions
+        self.grad_bias = np.sum(upstream_grad, axis=(0, 2, 3))
+        
+        # grad_weights: same shape as self.weights
+        self.grad_weights = np.zeros_like(self.weights)
+        
+        # grad_input: we start with the padded shape to match forward pass
+        grad_input_padded = np.zeros_like(self.x_padded)
 
-            # 3. Backprop through the convolution
-            for i in range(out_height):
-                for j in range(out_width):
-                    # Gradient at this specific spatial position (batch, out_channels)
-                    grad_pixel = upstream_grad[:, :, i, j]
-                    
-                    # --- GRAD WEIGHTS ---
-                    # Get the patch of input that contributed to this output pixel
-                    x_patch = self.x_padded[:, :, i:i+self.kernel_size, j:j+self.kernel_size]
-                    # Accumulate gradient: (batch, out_channels) dot (batch, in_channels, k, k)
-                    self.grad_weights += np.tensordot(grad_pixel, x_patch, axes=([0], [0]))
-
-                    # --- GRAD INPUT ---
-                    # Distribute gradient back to input positions
-                    # (batch, out_channels) dot (out_channels, in_channels, k, k)
-                    grad_input_padded[:, :, i:i+self.kernel_size, j:j+self.kernel_size] += \
-                        np.tensordot(grad_pixel, self.weights, axes=([1], [0]))
-
-            # 4. Remove padding to return to original input shape
-            if self.padding > 0:
-                grad_input = grad_input_padded[:, :, self.padding:-self.padding, self.padding:-self.padding]
-            else:
-                grad_input = grad_input_padded
+        # 3. Backprop through the convolution
+        for i in range(out_height):
+            for j in range(out_width):
+                # Gradient at this specific spatial position (batch, out_channels)
+                grad_pixel = upstream_grad[:, :, i, j]
                 
-            return grad_input, self.grad_weights, self.grad_bias
+                # --- GRAD WEIGHTS ---
+                # Get the patch of input that contributed to this output pixel
+                x_patch = self.x_padded[:, :, i:i+self.kernel_size, j:j+self.kernel_size]
+                # Accumulate gradient: (batch, out_channels) dot (batch, in_channels, k, k)
+                self.grad_weights += np.tensordot(grad_pixel, x_patch, axes=([0], [0]))
+
+                # --- GRAD INPUT ---
+                # Distribute gradient back to input positions
+                # (batch, out_channels) dot (out_channels, in_channels, k, k)
+                grad_input_padded[:, :, i:i+self.kernel_size, j:j+self.kernel_size] += \
+                    np.tensordot(grad_pixel, self.weights, axes=([1], [0]))
+
+        # 4. Remove padding to return to original input shape
+        if self.padding > 0:
+            grad_input = grad_input_padded[:, :, self.padding:-self.padding, self.padding:-self.padding]
+        else:
+            grad_input = grad_input_padded
+            
+        return grad_input, self.grad_weights, self.grad_bias
 
 
 

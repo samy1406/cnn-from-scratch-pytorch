@@ -18,4 +18,7 @@ class CrossEntropyLoss:
         return loss
     
     def backward(self):
-        pass
+        batch_size = self.probs.shape[0]
+        d_logits = self.probs.copy()
+        d_logits[np.arange(batch_size), self.labels] -= 1
+        return d_logits / batch_size

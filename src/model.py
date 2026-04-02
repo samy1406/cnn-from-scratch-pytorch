@@ -167,5 +167,17 @@ class FCLayer:
         
     
     def backward(self, upstream_grad):
-        # backprop
-        pass
+        # 1. Gradient with respect to weights
+        # Shape: (in_features, out_features)
+        self.grad_weights = self.input.T @ upstream_grad
+        
+        # 2. Gradient with respect to bias
+        # Sum across the batch dimension (axis 0)
+        # Shape: (out_features,)
+        self.grad_bias = np.sum(upstream_grad, axis=0)
+        
+        # 3. Gradient with respect to input (to pass back)
+        # Shape: (batch_size, in_features)
+        grad_input = upstream_grad @ self.weights.T
+        
+        return grad_input

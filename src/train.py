@@ -44,6 +44,8 @@ def train(epochs=10, lr=0.01, batch_size=64):
             grad = flat.backward(grad)
             grad = pool1.backward(grad)
             grad = relu1.backward(grad)
+            print("grad before conv1:", type(grad), grad is None)
+            print("grad before relu1:", type(grad))
             conv1.backward(grad)
             
             # 6. SGD update

@@ -40,8 +40,7 @@ class ConvLayer:
 
     
     def backward(self, upstream_grad):
-        print("upstream_grad type:", type(upstream_grad))
-        print("upstream_grad:", upstream_grad)
+        
         # 1. Dimensions
         batch_size, out_channels, out_height, out_width = upstream_grad.shape
         

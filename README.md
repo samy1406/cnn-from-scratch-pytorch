@@ -199,6 +199,6 @@ Open `notebooks/cnn_cifar10.ipynb` in Colab → Runtime → Change runtime type 
 
 ## Author
 
-**Samy** — AI/ML Engineer | Computer Vision + Edge AI | BITS Pilani M.Tech AI/ML
+**Samy** — AI/ML Engineer | Computer Vision + Edge AI + GenAI
 
 [GitHub](https://github.com/samy1406) • [LinkedIn](#) • [YouTube](#)

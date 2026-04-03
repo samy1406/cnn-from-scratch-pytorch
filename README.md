@@ -1,17 +1,18 @@
 # CNN from Scratch — PyTorch + NumPy
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.x-orange)
+![NumPy](https://img.shields.io/badge/NumPy-1.24+-orange)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.x-red)
 ![Dataset](https://img.shields.io/badge/Dataset-CIFAR--10-green)
-![Status](https://img.shields.io/badge/Status-In%20Progress-yellow)
+![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
 
-> Building a Convolutional Neural Network from scratch — no `nn.Conv2d`, no `nn.Linear`. Every forward pass, every gradient, every weight update written by hand. Trained on CIFAR-10.
+> Building a Convolutional Neural Network completely from scratch — no `nn.Conv2d`, no `nn.Linear`, no autograd. Every forward pass, every gradient, every weight update written by hand using NumPy. Trained on CIFAR-10.
 
 ---
 
 ## Problem Statement
 
-Most engineers use `torch.nn` as a black box. This project breaks open that black box — implementing convolutions, pooling, activations, and backpropagation manually to deeply understand what happens inside every CNN call.
+Most ML engineers use `torch.nn` as a black box. This project breaks open that black box — implementing convolutions, pooling, activations, and backpropagation manually to deeply understand what happens inside every CNN call.
 
 **Why this matters:** At Qualcomm, NVIDIA, and similar companies, you will be asked to derive or explain these operations on a whiteboard. This project is the answer to that.
 
@@ -21,61 +22,119 @@ Most engineers use `torch.nn` as a black box. This project breaks open that blac
 
 ```
 Input (3 × 32 × 32)
-        ↓
-Conv Layer 1  (3 → 32 filters, 3×3)   ← implemented from scratch
-        ↓
-ReLU                                   ← implemented from scratch
-        ↓
-MaxPool (2×2)                          ← implemented from scratch
-        ↓
-Conv Layer 2  (32 → 64 filters, 3×3)  ← implemented from scratch
-        ↓
-ReLU
-        ↓
-MaxPool (2×2)
-        ↓
-Flatten
-        ↓
-Fully Connected (64×8×8 → 256)        ← implemented from scratch
-        ↓
-ReLU
-        ↓
-Fully Connected (256 → 10)
-        ↓
-Softmax + CrossEntropy Loss
+        │
+        ▼
+┌───────────────────┐
+│   Conv Layer 1    │  3 → 32 filters, 3×3, padding=1
+│   (from scratch)  │  Output: (32 × 32 × 32)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│      ReLU         │  Non-linear activation
+│   (from scratch)  │  Output: (32 × 32 × 32)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│    MaxPool 2×2    │  Stride=2, spatial halving
+│   (from scratch)  │  Output: (32 × 16 × 16)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│     Flatten       │  32 × 16 × 16 = 8192
+│   (from scratch)  │  Output: (8192,)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│   FC Layer 1      │  8192 → 128
+│   (from scratch)  │  Output: (128,)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│      ReLU         │  Output: (128,)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│   FC Layer 2      │  128 → 10
+│   (from scratch)  │  Output: (10,)
+└───────────────────┘
+        │
+        ▼
+┌───────────────────┐
+│ Softmax +         │  Numerically stable
+│ CrossEntropy Loss │  Combined for stability
+└───────────────────┘
 ```
 
 ---
 
 ## What "From Scratch" Means Here
 
-| Component | What's allowed | What's NOT allowed |
-|-----------|---------------|-------------------|
-| Conv Layer | NumPy for the math, PyTorch tensors for data | `nn.Conv2d` |
-| Backprop | Manual gradient computation | `autograd` for layer internals |
-| Weight update | Manual SGD loop | `torch.optim` |
-| Data loading | `torchvision.datasets`, `DataLoader` | — |
-| Loss | Manual CrossEntropy | `nn.CrossEntropyLoss` |
+| Component | Implemented | NOT used |
+|-----------|-------------|----------|
+| Conv Layer forward | Manual sliding window + tensordot | `nn.Conv2d` |
+| Conv Layer backward | Transposed convolution gradients | `autograd` |
+| ReLU forward/backward | Element-wise max + gradient gate | `nn.ReLU` |
+| MaxPool forward/backward | Max with argmax mask | `nn.MaxPool2d` |
+| FC Layer forward/backward | Matrix multiply + manual gradients | `nn.Linear` |
+| Weight initialization | He initialization | default init |
+| Loss function | Stable softmax + NLL | `nn.CrossEntropyLoss` |
+| Optimizer | Manual SGD loop | `torch.optim` |
+| Data loading | `torchvision` (allowed) | — |
 
 ---
 
 ## Results
 
-
 | Metric | Value |
 |--------|-------|
 | Dataset | CIFAR-10 (10 classes) |
-| Final Test Accuracy | TBD |
-| Training Time / Epoch | TBD |
-| Hardware | Google Colab T4 GPU |
+| Initial Loss (random) | ~2.302 (theoretical: -log(0.1)) |
+| Loss after 1 epoch | 1.6419 |
+| Hardware | CPU (NumPy) |
+| Parameters | ~1.1M |
 
-*Results will be updated as training progresses.*
+**Loss sanity check:** Random initialization gives loss ≈ 2.302 (`-log(1/10)`). Achieving 1.64 after 1 epoch confirms the model is learning correctly.
 
 ---
 
-## Demo
+## Key Concepts Implemented
 
-*Demo GIF will be added after training is complete.*
+### 1. Convolution (Cross-Correlation)
+Filter slides over input with stride and padding. Each position produces one scalar via element-wise multiply + sum:
+```
+output[i][j] = sum(input[i:i+k, j:j+k] * filter) + bias
+```
+
+### 2. Backprop Through Conv — Two Gradients
+```
+# Gradient w.r.t. weights (accumulate across all positions)
+grad_filter[m][n] = sum over (i,j): input[i+m][j+n] × upstream_grad[i][j]
+
+# Gradient w.r.t. input (transposed convolution)
+grad_input[i][j] = sum over (m,n): filter[m][n] × upstream_grad[i-m][j-n]
+```
+
+### 3. MaxPool Backward — The Mask Trick
+During forward pass, save which position was the maximum (the "mask"). During backward, only route gradient to that position. All other positions get zero.
+
+### 4. Softmax + CrossEntropy — Numerically Stable
+Combined gradient simplifies beautifully:
+```
+grad[correct_class] = softmax(logit) - 1
+grad[other_classes] = softmax(logit)
+```
+
+### 5. He Initialization
+```
+weights ~ N(0, sqrt(2 / fan_in))
+```
+Prevents vanishing/exploding gradients in ReLU networks.
 
 ---
 
@@ -84,18 +143,19 @@ Softmax + CrossEntropy Loss
 ```
 cnn-from-scratch-pytorch/
 ├── README.md
-├── LEARNING.md              ← personal notes on every concept
+├── LEARNING.md              ← personal concept notes
 ├── requirements.txt
 ├── notebooks/
-│   └── cnn_cifar10.ipynb    ← main Colab notebook
+│   └── cnn_cifar10.ipynb    ← Colab notebook
 ├── src/
 │   ├── dataloader.py        ← CIFAR-10 loading and preprocessing
-│   ├── model.py             ← CNN layers implemented from scratch
-│   └── train.py             ← training loop and evaluation
+│   ├── model.py             ← All layers from scratch
+│   ├── loss.py              ← CrossEntropy with stable softmax
+│   └── train.py             ← Training loop with SGD
 ├── demo/
-│   └── (demo GIF here)
+│   └── (loss curve GIF)
 └── data/
-    └── (auto-downloaded by torchvision)
+    └── (auto-downloaded CIFAR-10)
 ```
 
 ---
@@ -108,36 +168,32 @@ cd cnn-from-scratch-pytorch
 pip install -r requirements.txt
 ```
 
-**To run in Google Colab:**
+**Run training:**
+```python
+from src.train import train
+train(epochs=10, lr=0.01, batch_size=64)
+```
 
-Open `notebooks/cnn_cifar10.ipynb` directly in Colab — GPU runtime recommended (Runtime → Change runtime type → T4 GPU).
+**Run on Google Colab (recommended — GPU):**
 
----
-
-## Key Concepts Implemented
-
-- **Convolution (cross-correlation):** filter sliding over input with stride and padding
-- **Backprop through Conv:** gradient w.r.t. weights = input ⊛ upstream gradient; gradient w.r.t. input = upstream gradient ⊛ flipped filter
-- **MaxPool backward:** gradient flows only through the max-position (argmax mask)
-- **ReLU backward:** gate — gradient passes if forward activation > 0, else blocked
-- **Softmax + CrossEntropy:** combined for numerical stability
+Open `notebooks/cnn_cifar10.ipynb` in Colab → Runtime → Change runtime type → T4 GPU.
 
 ---
 
-## What I Learned
+## Interview Questions This Project Answers
 
-*This section will be expanded throughout the project. See [LEARNING.md](LEARNING.md) for detailed notes.*
-
-- Why backprop through a conv layer requires a transposed convolution
-- How gradient accumulation works when a filter weight touches multiple input patches
-- Why combining Softmax and CrossEntropy improves numerical stability
-- The real cost of naive conv vs optimized im2col approaches
+- **"Implement a conv layer forward pass"** → `src/model.py ConvLayer.forward()`
+- **"What happens during backprop through a conv layer?"** → Two gradients: transposed conv for input, correlation for weights
+- **"Why do we need non-linear activations?"** → Stacking linear layers collapses to one linear transform
+- **"Why does MaxPool need to save positions during forward?"** → Backward needs to route gradient only to the max position
+- **"Why combine Softmax and CrossEntropy?"** → Numerical stability + gradient simplification
+- **"What is He initialization and why?"** → Compensates for ReLU killing half the neurons on average
 
 ---
 
 ## Related Projects
 
-- [LearningNeuralNet](https://github.com/samy1406/LearningNeuralNet) — micrograd autograd engine (prerequisite to this project)
+- [LearningNeuralNet](https://github.com/samy1406/LearningNeuralNet) — micrograd autograd engine (scalar autograd, prerequisite to this)
 
 ---
 
